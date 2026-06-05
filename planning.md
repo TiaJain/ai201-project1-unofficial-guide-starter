@@ -9,27 +9,22 @@
 
 ## Domain
 
-<!-- What domain did you choose? Why is this knowledge valuable and hard to find through official channels? -->
-
----
+Student reviews of UC Berkeley CS professors, sourced from Rate My Professors. This knowledge is valuable because it captures honest, experience-based opinions about teaching quality, exam difficulty, and workload that don't appear in any official university channel. Official course catalogs and syllabi tell you what a class covers- they don't tell you whether the professor's lectures are worth attending or how curved the exams are.
 
 ## Documents
 
-<!-- List your specific sources: URLs, subreddit names, forum threads, or file descriptions.
-     Aim for at least 10 sources that together cover different subtopics or perspectives within your domain. -->
-
 | # | Source | Description | URL or location |
 |---|--------|-------------|-----------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
-| 6 | | | |
-| 7 | | | |
-| 8 | | | |
-| 9 | | | |
-| 10 | | | |
+| 1 | Rate My Professors | Paul Hilfinger reviews | https://www.ratemyprofessors.com/professor/226535 |
+| 2 | Rate My Professors | Anant Sahai reviews | https://www.ratemyprofessors.com/professor/887794 |
+| 3 | Rate My Professors | Satish Rao reviews | https://www.ratemyprofessors.com/professor/525740 |
+| 4 | Rate My Professors | Dan Garcia reviews | https://www.ratemyprofessors.com/professor/142865 |
+| 5 | Rate My Professors | Michael (Miki) Lustig reviews | https://www.ratemyprofessors.com/professor/1774912 |
+| 6 | Rate My Professors | John DeNero reviews | https://www.ratemyprofessors.com/professor/1621181 |
+| 7 | Rate My Professors | Josh Hug reviews | https://www.ratemyprofessors.com/professor/667663 |
+| 8 | Rate My Professors | Peyrin Kao reviews | https://www.ratemyprofessors.com/professor/2804069 |
+| 9 | Rate My Professors | Gireeja Ranade reviews | https://www.ratemyprofessors.com/professor/2369550 |
+| 10 | Rate My Professors | Babak Ayazifar reviews | https://www.ratemyprofessors.com/professor/761773 |
 
 ---
 
