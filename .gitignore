@@ -18,3 +18,7 @@ chroma/
 
 # macOS
 .DS_Store
+chroma_db/
+.venv/
+__pycache__/
+raw_documents.json
