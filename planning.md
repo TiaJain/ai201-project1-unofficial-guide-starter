@@ -35,11 +35,22 @@ Student reviews of UC Berkeley CS professors, sourced from Rate My Professors. T
      numbers fit the structure of your documents.
      A review-heavy corpus warrants different chunking than a long FAQ. -->
 
-**Chunk size:** ~400 characters (roughly 80–100 tokens)
+## Chunking Strategy
 
-**Overlap:** 50 characters
+**Chunk size:** One review per chunk (no fixed character window).
 
-**Reasoning:** Rate my professor reviews are pretty short, self contained opinions. typically 1–4 sentences each. One review usually expresses one coherent take (for ex: "exams are curved, attend lecture"). A 400 character chunk fits roughly one full review, so each embedding captures a complete thought that can stand alone in retrieval. going smaller (eg 200 chars) would split a single review midthought, so "Hilfinger's exams are" and "heavily based on lecture" land in separate chunks and neither is retrievable on its own. Going much larger would merge several unrelated reviews into one embedding, diluting the semantic signal so specific queries can't match precisely. the small 50 char overlap is a safety margin for reviews that run slightly long, so a fact spanning a boundary still appears intact in one chunk.
+**Overlap:** None between reviews; a 50-char fallback overlap applies only if a
+single review ever exceeds 600 characters (rare, since RMP caps reviews at ~350).
+
+**Reasoning:** each RMP review is a short (capped ~350 char), self-contained
+statement of one student's opinion, so the review itself is the natural atomic
+unit of retrieval. Splitting a single review into smaller windows would fragment
+one coherent thought & merging several reviews into a larger fixed-size chunk would blend different students' opinions into one
+embedding and dilute the semantic signal. Each chunk is prefixed with a short
+context line ("Review of Professor X (course):") so it stands alone even when a
+review never names the professor (addressing the missing-attribution risk noted
+in Anticipated Challenges). Reviews under 15 characters (eg "1337") are dropped
+as noise. result: 1,077 chunks across 10 professors
 
 ---
 
