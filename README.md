@@ -69,39 +69,49 @@ I ran all five questions through `query.py`. The responses below are summarized,
 |---|----------|-----------------|------------------------------|-------------------|-------------------|
 | 1 | What do students say about Paul Hilfinger's lectures and projects in CS 61B? | Lectures are widely called poor or confusing, he reads off slides. Projects are brutal but rewarding and grading is fair. | Says lectures are divisive, quotes "completely useless" and "reads off the slides" but also "fun to listen to", and that projects and assignments are "lengthy" and "very good for learning". Flags the lecture split correctly. Source hilfinger.txt, top distance 0.224. | Relevant | Accurate |
 | 2 | How do students describe John DeNero as a CS 61A instructor? | Overwhelmingly positive. Passionate, caring, clear, well organized lecturer. | Describes him as a great lecturer who cares about students, is passionate, and explains clearly and amusingly. Notes "legend" and "love him". Source denero.txt, top distance 0.245. | Relevant | Accurate |
-| 3 | What's the student consensus on Satish Rao's teaching style and exams in CS 170? | Mixed to negative on teaching, hard to follow, reads slides. Exams very hard. | Says reviews are split, quotes "hit or miss", "terrible", and "gaps in the explanations" against students who like his style, and that exams are "super hard" and "significantly harder" than past semesters. Source rao.txt, top distance 0.259. | Partially relevant, see failure case, 4 of 5 chunks were CS70 and not CS170. | Partially accurate |
+| 3 | What's the student consensus on Satish Rao's teaching style and exams in CS 170? | Mixed to negative on teaching, hard to follow, reads slides. Exams very hard. | Varies by run, see failure case. Retrieval pulls mostly CS70 chunks for this CS170 question, and the answer ranges from a blended CS70/CS170 summary to an honest "only one CS170 review" to a refusal. Source rao.txt when it answers. | Off target, 4 of 5 (or 5 of 5) chunks were CS70, not CS170. | Partially accurate / unstable |
 | 4 | Do students find Babak Ayazifar's exams difficult, and would they recommend him? | Yes to both. Exams are very hard but he curves generously and is highly recommended. | Says exams are difficult, quotes "some of the hardest exams I've ever taken" and "quite tricky", but that he curves generously and tests are "always fair", and that reviews are overwhelmingly positive on recommending him. Source ayazifar.txt, top distance 0.156. | Relevant | Accurate |
 | 5 | What do students say about Josh Hug's CS 61B lectures versus his exams and workload? | Lectures praised as clear and funny. Exams hard but fair. Workload heavy. | Says lectures are "super clear" and make hard structures simple, the class is "hard and time consuming" but "enjoyable and manageable", exams are "pretty fair", and projects are "rewarding". Source hug.txt, top distance 0.311. | Relevant | Accurate |
 
-**Summary.** 4 of 5 accurate, 1 partially accurate. The partial one is Rao, and it's a retrieval side course confusion issue that I break down below. The generation itself faithfully summarized the chunks it was handed, the problem was that those chunks were mostly the wrong course.
+**Summary.** 4 of 5 accurate, 1 unstable. The unstable one is Rao in CS 170, and it's a retrieval side course confusion issue that I break down below. The short version is that retrieval consistently pulls mostly CS70 chunks for a CS170 question, and what the generator does with those wrong course chunks changes from run to run.
 
 ---
 
 ## Failure Case Analysis
 
-**Question that failed.** "What's the student consensus on Satish Rao's teaching style and exams in CS 170?"
+**Question that failed.** Any question that asks about Satish Rao in CS 170 specifically. For example "What do students say about Satish Rao in CS 170?" or "What's the student consensus on Satish Rao's teaching style and exams in CS 170?".
 
-**What the system returned.** A fluent, correctly grounded summary of Rao's teaching and exams. The problem is it was built mostly from CS70 reviews instead of the CS170 reviews the question actually asked about. Here's the retrieval breakdown for the top 5 chunks.
+**What the system returned.** This is the interesting part. The system does not fail the same way every time. I ran a few different phrasings of the CS 170 question and got three different behaviors. Sometimes it blended CS70 and CS170 reviews into one confident answer as if they were the same course. Sometimes it noticed only one of the retrieved reviews was actually CS170 and answered honestly that there's just one review. And sometimes the distance gate refused the question entirely with "I don't have enough information on that.". Same underlying question, three different surface outcomes depending on the exact wording and on the run.
+
+The thing that does NOT change is retrieval. Underneath all three behaviors, retrieval keeps pulling mostly CS70 chunks for a CS170 question. Here's the deterministic breakdown across three phrasings:
 
 ```
-#1  course=CS70   distance=0.259
-#2  course=CS170  distance=0.287
-#3  course=CS70   distance=0.292
-#4  course=CS70   distance=0.296
-#5  course=CS70   distance=0.304
+"What is the student consensus on Satish Rao teaching style and exams in CS 170?"
+   CS70   0.277      CS170  0.293      CS70   0.314      CS70   0.317      CS70   0.325
+   -> CS170: 1/5
+
+"What do students say about Satish Rao in CS 170?"
+   CS70   0.288      CS70   0.315      CS70   0.317      CS61A  0.322      CS70   0.330
+   -> CS170: 0/5
+
+"How hard are Satish Rao exams in CS 170?"
+   CS70   0.351      CS70   0.365      CS170  0.376      CS70   0.388      CS70   0.394
+   -> CS170: 1/5
 ```
 
-Only 1 of the 5 retrieved chunks was actually a CS170 review. The other 4 were CS70. The answer reads fine and it's correctly attributed to rao.txt, but it blends two different courses together as if they were one.
+So in the best case only 1 of 5 retrieved chunks is actually CS170, and in one phrasing zero of them are. The course the user asked about is barely represented or missing entirely from what the system reads.
 
 **Root cause, tied to a specific pipeline stage.** This is a retrieval and embedding failure, not a generation failure. The embedding model, `all-MiniLM-L6-v2`, maps "CS70" and "CS170" to almost the same spot in vector space. They're one character apart and the model has no special handling for course numbers, so similarity alone can't separate them. On top of that, Rao teaches both courses and the corpus has way more CS70 reviews for him than CS170 ones, so the nearest neighbors to a CS170 query end up being mostly CS70 chunks. The course number is sitting right there in each chunk's metadata, but retrieval only uses that metadata to display the course, not to filter on it. So nothing is actually forcing the results to match the course that was asked about. This is the same cross course contamination risk I predicted in the Anticipated Challenges section of planning.md.
 
-**What I would change to fix it.** Add metadata filtering to retrieval. ChromaDB supports a `where` clause, so if a query mentions a specific course I could parse out that course code and pass `where={"course": "CS170"}` to narrow the candidate set before ranking by similarity. A lighter version of this is hybrid retrieval, where I keep semantic search but boost or rerank chunks whose metadata course exactly matches the course I detect in the query. Either way I'd be using the course metadata that's already on every chunk but currently goes unused at retrieval time.
+The unstable surface behavior is a symptom of this. Because retrieval hands the generator a pile of mostly wrong course chunks, and because Groq's model is nondeterministic even at temperature 0, what the LLM does with that bad context varies run to run. So the real problem isn't any single bad answer, it's that the system is fragile on course specific questions and I can't even count on it failing consistently. That's worse than a predictable failure, because it means the answer quality depends on a coin flip on top of bad retrieval.
+
+**What I would change to fix it.** Add metadata filtering to retrieval. ChromaDB supports a `where` clause, so if a query mentions a specific course I could parse out that course code and pass `where={"course": "CS170"}` to narrow the candidate set before ranking by similarity. A lighter version of this is hybrid retrieval, where I keep semantic search but boost or rerank chunks whose metadata course exactly matches the course I detect in the query. Either way I'd be using the course metadata that's already on every chunk but currently goes unused at retrieval time. Fixing retrieval also fixes the instability, because once the model is reading the right course's reviews the nondeterminism has a lot less room to swing the answer.
 
 ---
 
 ## Spec Reflection
 
-**One way the spec helped me during implementation.** Writing the Anticipated Challenges section of planning.md before I built anything meant the Rao CS170 versus CS70 failure was something I'd already predicted, not a surprise. I had already reasoned that since all the documents are structurally similar CS professor reviews, a query about one course or professor could pull high similarity chunks about a different one. So during evaluation I knew to actually check the per chunk course breakdown instead of just trusting the answer because it sounded good. The spec basically turned debugging into confirming a known risk, which made my failure analysis specific instead of vague.
+**One way the spec helped me during implementation.** Writing the Anticipated Challenges section of planning.md before I built anything meant the Rao CS170 versus CS70 problem was something I'd already predicted, not a surprise. I had already reasoned that since all the documents are structurally similar CS professor reviews, a query about one course or professor could pull high similarity chunks about a different one. So during evaluation I knew to actually check the per chunk course breakdown instead of just trusting the answer because it sounded good. That's how I caught that the real issue was in retrieval and not in the wording of any one answer. The spec basically turned debugging into confirming a known risk, which made my failure analysis specific instead of vague.
 
 **One way my implementation diverged from the spec, and why.** My original planning.md chunking strategy said roughly 400 character chunks with 50 character overlap. Once I actually read through the collected reviews I switched to one review per chunk with no overlap. The reason is that RMP reviews are already short, capped around 350 characters, and atomic, since each one is a single opinion. So a fixed 400 character window would either split a review in half or jam two unrelated ones together, and both of those hurt retrieval. One review per chunk just matches the natural unit of the data. I updated the chunking strategy section of planning.md to document this change and why I made it, like the milestone asks.
 
